@@ -5,7 +5,7 @@ from src.config import DATABASE_URL
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
-    connect_args={"connect_timeout": 10},
+    connect_args={"connection_timeout": 10, "ssl_disabled": False, "use_pure": True},
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
