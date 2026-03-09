@@ -17,7 +17,12 @@ from src.routers import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("Database tables created successfully.")
+    except Exception as e:
+        print(f"WARNING: Could not connect to database: {e}")
+        print("Server will start, but DB-dependent routes will fail until the DB is reachable.")
     yield
 
 

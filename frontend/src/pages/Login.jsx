@@ -21,7 +21,13 @@ export default function Login() {
       loginUser(data.access_token, me.data);
       navigate(me.data.role === "admin" ? "/admin" : "/dashboard");
     } catch (err) {
-      setError(err.response?.data?.detail || "Login failed");
+      if (err.response) {
+        setError(err.response.data?.detail || "Login failed");
+      } else if (err.request) {
+        setError("Cannot reach the server. Is the backend running?");
+      } else {
+        setError("Login failed");
+      }
     } finally {
       setLoading(false);
     }
