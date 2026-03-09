@@ -29,6 +29,7 @@ export default function Register() {
     try {
       await apiRegister(username, password, Number(eventId));
       const { data } = await apiLogin(username, password);
+      localStorage.setItem("token", data.access_token);
       const me = await getMe();
       loginUser(data.access_token, me.data);
       navigate("/dashboard");

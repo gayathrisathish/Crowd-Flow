@@ -17,6 +17,7 @@ export default function Login() {
     setLoading(true);
     try {
       const { data } = await apiLogin(username, password);
+      localStorage.setItem("token", data.access_token);
       const me = await getMe();
       loginUser(data.access_token, me.data);
       navigate(me.data.role === "admin" ? "/admin" : "/dashboard");
