@@ -10,16 +10,21 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
+      setUser(null);
       setLoading(false);
       return;
     }
     getMe()
-      .then((res) => setUser(res.data))
+      .then((res) => {
+        setUser(res.data);
+        setLoading(false);
+      })
       .catch(() => {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-      })
-      .finally(() => setLoading(false));
+        setUser(null);
+        setLoading(false);
+      });
   }, []);
 
   const loginUser = (token, userData) => {

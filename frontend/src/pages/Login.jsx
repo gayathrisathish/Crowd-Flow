@@ -17,11 +17,17 @@ export default function Login() {
     setLoading(true);
     try {
       const { data } = await apiLogin(username, password);
+      console.log("Login API response:", data);
       localStorage.setItem("token", data.access_token);
+      console.log("Token stored in localStorage:", localStorage.getItem("token"));
       const me = await getMe();
+      console.log("getMe response:", me.data);
       loginUser(data.access_token, me.data);
+      console.log("loginUser called, user:", me.data);
       navigate(me.data.role === "admin" ? "/admin" : "/dashboard");
+      console.log("Navigated to:", me.data.role === "admin" ? "/admin" : "/dashboard");
     } catch (err) {
+      console.log("Login error:", err);
       if (err.response) {
         setError(err.response.data?.detail || "Login failed");
       } else if (err.request) {
