@@ -1,6 +1,6 @@
 import datetime
 from sqlalchemy import (
-    Column, Integer, String, DateTime, Text, ForeignKey, Enum as SAEnum,
+    Column, Integer, String, DateTime, Text, ForeignKey, Enum as SAEnum, Float,
 )
 from sqlalchemy.orm import relationship
 from src.database import Base
@@ -83,3 +83,15 @@ class AuditLog(Base):
     details = Column(Text, nullable=True)
 
     user = relationship("User", back_populates="audit_logs")
+
+
+class CrowdPoint(Base):
+    __tablename__ = "crowd_points"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
+    lat = Column(Float, nullable=False)
+    lng = Column(Float, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    event = relationship("Event")

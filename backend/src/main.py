@@ -12,6 +12,7 @@ from src.routers import (
     alerts_router,
     verification_router,
     audit_router,
+    crowd_router,
 )
 
 
@@ -51,6 +52,7 @@ app.include_router(tickets_router.router)
 app.include_router(alerts_router.router)
 app.include_router(verification_router.router)
 app.include_router(audit_router.router)
+app.include_router(crowd_router.router)
 
 
 @app.get("/", tags=["Health"])

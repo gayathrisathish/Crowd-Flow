@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import {
   getEvents, createEvent, updateEvent, deleteEvent,
@@ -24,8 +25,9 @@ function Stat({ icon, label, value, color }) {
   );
 }
 
-/* ─── Heatmap placeholder ─── */
+/* ─── Heatmap with links to monitor ─── */
 function CrowdHeatmap({ events, tickets }) {
+  const navigate = useNavigate();
   const data = events.map((ev) => {
     const count = tickets.filter((t) => t.event_id === ev.id && t.status === "used").length;
     const total = tickets.filter((t) => t.event_id === ev.id).length;
@@ -40,13 +42,16 @@ function CrowdHeatmap({ events, tickets }) {
         {data.map((d) => (
           <div
             key={d.id}
-            className="heatmap-cell"
+            className="heatmap-cell clickable"
             style={{
               background: `rgba(34,197,94, ${Math.max(0.1, d.pct / 100)})`,
+              cursor: "pointer",
             }}
+            onClick={() => navigate(`/admin/monitor/${d.id}`)}
           >
             <strong>{d.name}</strong>
             <span>{d.verified}/{d.total} verified ({d.pct}%)</span>
+            <span className="heatmap-link">📈 Open Crowd-Flow Monitor →</span>
           </div>
         ))}
         {data.length === 0 && <p className="muted">No event data yet.</p>}
@@ -64,6 +69,7 @@ export default function AdminDashboard() {
   const [alerts, setAlerts] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   /* form states */
   const [evForm, setEvForm] = useState({ name: "", location: "", date: "" });
@@ -129,8 +135,10 @@ export default function AdminDashboard() {
   const handleVerify = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
     try {
       await verifyTicket(verifyId);
+      setSuccess(`Ticket ${verifyId} verified successfully!`);
       setVerifyId("");
       load();
     } catch (err) { setError(err.response?.data?.detail || "Failed"); }
@@ -158,7 +166,7 @@ export default function AdminDashboard() {
             <button
               key={t.key}
               className={tab === t.key ? "active" : ""}
-              onClick={() => setTab(t.key)}
+              onClick={() => { setTab(t.key); setError(""); setSuccess(""); }}
             >
               {t.icon} {t.label}
             </button>
@@ -177,6 +185,7 @@ export default function AdminDashboard() {
         </header>
 
         {error && <div className="error-msg">{error}</div>}
+        {success && <div className="success-msg">{success}</div>}
 
         {/* ── Overview ── */}
         {tab === "overview" && (

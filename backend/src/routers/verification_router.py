@@ -20,7 +20,6 @@ def verify_ticket(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     if ticket.status != "active":
-        raise HTTPException(status_code=400, detail=f"Ticket is {ticket.status}, cannot verify")
 
     existing = db.query(CrowdVerification).filter(CrowdVerification.ticket_id == ticket.id).first()
     if existing:

@@ -57,4 +57,9 @@ export const verifyTicket = (ticket_id) =>
 // ── Audit ──
 export const getAuditLogs = () => api.get("/audit/");
 
+// ── Crowd Monitor ──
+export const getCrowdData = (eventId) => api.get(`/crowd/${eventId}`);
+export const simulateCrowd = (eventId) => api.post(`/crowd/${eventId}/simulate`);
+export const resetCrowd = (eventId) => api.delete(`/crowd/${eventId}/reset`);
+
 export default api;
