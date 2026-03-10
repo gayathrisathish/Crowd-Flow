@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { register as apiRegister, getEvents, login as apiLogin, getMe } from "../api";
 import { useAuth } from "../AuthContext";
 
@@ -10,7 +10,6 @@ export default function Register() {
   const [events, setEvents] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
   const { loginUser } = useAuth();
 
   useEffect(() => {
@@ -32,7 +31,6 @@ export default function Register() {
       localStorage.setItem("token", data.access_token);
       const me = await getMe();
       loginUser(data.access_token, me.data);
-      navigate("/dashboard");
     } catch (err) {
       setError(err.response?.data?.detail || "Registration failed");
     } finally {

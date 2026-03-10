@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE = "https://crowdflow-production.up.railway.app";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8001";
 const api = axios.create({ baseURL: API_BASE, timeout: 10000 });
 
 api.interceptors.request.use((config) => {
@@ -18,7 +18,7 @@ api.interceptors.response.use(
     ) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      window.location.href = "/login";
+      window.dispatchEvent(new Event("auth:logout"));
     }
     return Promise.reject(err);
   }

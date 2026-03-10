@@ -27,6 +27,12 @@ export function AuthProvider({ children }) {
       });
   }, []);
 
+  useEffect(() => {
+    const handleForceLogout = () => setUser(null);
+    window.addEventListener("auth:logout", handleForceLogout);
+    return () => window.removeEventListener("auth:logout", handleForceLogout);
+  }, []);
+
   const loginUser = (token, userData) => {
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(userData));
