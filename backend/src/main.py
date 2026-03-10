@@ -56,3 +56,6 @@ app.include_router(audit_router.router)
 @app.get("/", tags=["Health"])
 def health_check():
     return {"status": "ok", "service": "Crowd-Flow API"}
+@app.get("/")
+def root():
+    return {"message": "Crowd-Flow API is running"}

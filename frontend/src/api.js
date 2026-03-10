@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE = "https://crowdflow.up.railway.app";
+const API_BASE = "https://crowdflow-production.up.railway.app";
 const api = axios.create({ baseURL: API_BASE, timeout: 10000 });
 
 api.interceptors.request.use((config) => {
