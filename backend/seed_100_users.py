@@ -64,7 +64,7 @@ for i in range(100):
 
     user = User(
         username=username,
-        password_hash=fast_pwd.hash(password),
+        password_hash=fast_pwd.hash(password[:72]),
         role="attendee",
     )
     db.add(user)
