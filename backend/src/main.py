@@ -40,6 +40,14 @@ CORS_ORIGINS = [
     "https://crowd-flow-delta.vercel.app",
     "http://localhost:5173"
 ]
+// Express example
+app.use(cors({
+  origin: [
+    "https://crowd-flow-delta.vercel.app",
+    "http://localhost:5173"
+  ],
+  credentials: true
+}));
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
