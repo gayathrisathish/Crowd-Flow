@@ -9,9 +9,9 @@ MYSQL_USER = os.getenv("MYSQL_USER", "root")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "HMVQAbQzzpSSRVqhNkvZJPuwPxeCLlal")
 MYSQL_DB = os.getenv("MYSQL_DB", "railway")
 
-DATABASE_URL = (
-    f"mysql+mysqlconnector://{MYSQL_USER}:{MYSQL_PASSWORD}"
-    f"@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    f"mysql+mysqlconnector://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}"
 )
 
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "d8f3a1b7e924c0f6539281d4a7e5b0c8f1d6a3e9724b85c0f2d7a4e1b8c5f390")
