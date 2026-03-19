@@ -22,15 +22,15 @@ def verify_ticket(
     if ticket.status != "active":
         raise HTTPException(status_code=404, detail="Ticket is not verified")
 
-    existing = db.query(CrowdVerification).filter(CrowdVerification.ticket_id == ticket.id).first()
+    existing = db.query(CrowdVerification).filter(CrowdVerification.ticket_pk_id == ticket.ticket_pk_id).first()
     if existing:
         raise HTTPException(status_code=400, detail="Ticket already verified")
 
     ticket.status = "used"
-    verification = CrowdVerification(ticket_id=ticket.id, verifier_id=admin.id)
+    verification = CrowdVerification(ticket_pk_id=ticket.ticket_pk_id, verifier_id=admin.user_id)
     db.add(verification)
     db.commit()
     db.refresh(verification)
 
-    log_action(db, "TICKET_VERIFY", admin.id, f"Verified ticket {body.ticket_id}")
+    log_action(db, "TICKET_VERIFY", admin.user_id, f"Verified ticket {body.ticket_id}")
     return verification

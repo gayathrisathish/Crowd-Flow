@@ -17,7 +17,7 @@ def register(body: UserRegister, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == body.username).first():
         raise HTTPException(status_code=400, detail="Username already taken")
 
-    event = db.query(Event).filter(Event.id == body.event_id).first()
+    event = db.query(Event).filter(Event.event_id == body.event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
 
@@ -31,7 +31,7 @@ def register(body: UserRegister, db: Session = Depends(get_db)):
 
     ticket = Ticket(
         ticket_id=str(uuid.uuid4()),
-        user_id=user.id,
+        user_id=user.user_id,
         event_id=body.event_id,
         status="active",
     )
@@ -39,7 +39,7 @@ def register(body: UserRegister, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
 
-    log_action(db, "USER_REGISTER", user.id, f"Attendee registered for event {body.event_id}")
+    log_action(db, "USER_REGISTER", user.user_id, f"Attendee registered for event {body.event_id}")
     return user
 
 
@@ -49,8 +49,8 @@ def login(body: UserLogin, db: Session = Depends(get_db)):
     if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
-    token = create_access_token({"sub": str(user.id), "role": user.role})
-    log_action(db, "USER_LOGIN", user.id)
+    token = create_access_token({"sub": str(user.user_id), "role": user.role})
+    log_action(db, "USER_LOGIN", user.user_id)
     return {"access_token": token}
 
 

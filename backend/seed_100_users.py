@@ -48,7 +48,7 @@ if not events:
     db.close()
     sys.exit(1)
 
-event_ids = [e.id for e in events]
+event_ids = [e.event_id for e in events]
 created = []
 
 for i in range(100):
@@ -72,7 +72,7 @@ for i in range(100):
 
     event_id = random.choice(event_ids)
     tid = str(uuid.uuid4())
-    ticket = Ticket(ticket_id=tid, user_id=user.id, event_id=event_id, status="active")
+    ticket = Ticket(ticket_id=tid, user_id=user.user_id, event_id=event_id, status="active")
     db.add(ticket)
 
     # Add a crowd point on that event's map near a random hotspot

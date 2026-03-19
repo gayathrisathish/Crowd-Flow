@@ -35,5 +35,5 @@ def create_alert(
     db.add(alert)
     db.commit()
     db.refresh(alert)
-    log_action(db, "ALERT_CREATE", admin.id, f"Alert for event {body.event_id}: {body.message}")
+    log_action(db, "ALERT_CREATE", admin.user_id, f"Alert for event {body.event_id}: {body.message}")
     return alert

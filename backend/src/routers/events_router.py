@@ -19,7 +19,7 @@ def list_events(db: Session = Depends(get_db)):
 
 @router.get("/{event_id}", response_model=EventOut)
 def get_event(event_id: int, db: Session = Depends(get_db)):
-    event = db.query(Event).filter(Event.id == event_id).first()
+    event = db.query(Event).filter(Event.event_id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     return event
@@ -35,7 +35,7 @@ def create_event(
     db.add(event)
     db.commit()
     db.refresh(event)
-    log_action(db, "EVENT_CREATE", admin.id, f"Created event '{event.name}'")
+    log_action(db, "EVENT_CREATE", admin.user_id, f"Created event '{event.name}'")
     return event
 
 
@@ -46,14 +46,14 @@ def update_event(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
-    event = db.query(Event).filter(Event.id == event_id).first()
+    event = db.query(Event).filter(Event.event_id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(event, field, value)
     db.commit()
     db.refresh(event)
-    log_action(db, "EVENT_UPDATE", admin.id, f"Updated event {event_id}")
+    log_action(db, "EVENT_UPDATE", admin.user_id, f"Updated event {event_id}")
     return event
 
 
@@ -63,9 +63,9 @@ def delete_event(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
-    event = db.query(Event).filter(Event.id == event_id).first()
+    event = db.query(Event).filter(Event.event_id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     db.delete(event)
     db.commit()
-    log_action(db, "EVENT_DELETE", admin.id, f"Deleted event {event_id}")
+    log_action(db, "EVENT_DELETE", admin.user_id, f"Deleted event {event_id}")

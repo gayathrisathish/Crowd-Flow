@@ -21,7 +21,7 @@ class Token(BaseModel):
 
 
 class UserOut(BaseModel):
-    id: int
+    user_id: int
     username: str
     role: str
     registered_at: datetime
@@ -44,7 +44,7 @@ class EventUpdate(BaseModel):
 
 
 class EventOut(BaseModel):
-    id: int
+    event_id: int
     name: str
     location: str
     date: datetime
@@ -55,7 +55,7 @@ class EventOut(BaseModel):
 
 # ── Tickets ───────────────────────────────────────
 class TicketOut(BaseModel):
-    id: int
+    ticket_pk_id: int
     ticket_id: str
     user_id: int
     event_id: int
@@ -73,7 +73,7 @@ class AlertCreate(BaseModel):
 
 
 class AlertOut(BaseModel):
-    id: int
+    alert_id: int
     event_id: int
     message: str
     level: str
@@ -89,8 +89,8 @@ class VerifyRequest(BaseModel):
 
 
 class VerificationOut(BaseModel):
-    id: int
-    ticket_id: int
+    verification_id: int
+    ticket_pk_id: int
     verified_at: datetime
     verifier_id: int
 
@@ -100,7 +100,7 @@ class VerificationOut(BaseModel):
 
 # ── Audit Logs ────────────────────────────────────
 class AuditLogOut(BaseModel):
-    id: int
+    audit_id: int
     action: str
     user_id: Optional[int]
     timestamp: datetime

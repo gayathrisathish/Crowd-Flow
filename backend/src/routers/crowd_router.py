@@ -62,7 +62,7 @@ def _cluster_points(points: list[dict]) -> list[dict]:
 def get_crowd_data(event_id: int, db: Session = Depends(get_db),
                    _user: User = Depends(get_current_user)):
     points = db.query(CrowdPoint).filter(CrowdPoint.event_id == event_id).all()
-    point_list = [{"id": p.id, "lat": p.lat, "lng": p.lng} for p in points]
+    point_list = [{"id": p.crowd_point_id, "lat": p.lat, "lng": p.lng} for p in points]
     clusters = _cluster_points(point_list)
     high_density = sum(1 for c in clusters if c["exceeds_threshold"])
     return {
@@ -98,7 +98,7 @@ def simulate_crowd(event_id: int, db: Session = Depends(get_db),
 
     # Check for threshold breaches and auto-create alerts
     all_points = db.query(CrowdPoint).filter(CrowdPoint.event_id == event_id).all()
-    all_point_list = [{"id": p.id, "lat": p.lat, "lng": p.lng} for p in all_points]
+    all_point_list = [{"id": p.crowd_point_id, "lat": p.lat, "lng": p.lng} for p in all_points]
     clusters = _cluster_points(all_point_list)
     for c in clusters:
         if c["exceeds_threshold"]:

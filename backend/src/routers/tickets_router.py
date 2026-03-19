@@ -16,7 +16,7 @@ def my_tickets(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return db.query(Ticket).filter(Ticket.user_id == current_user.id).all()
+    return db.query(Ticket).filter(Ticket.user_id == current_user.user_id).all()
 
 
 @router.get("/", response_model=List[TicketOut])
@@ -36,6 +36,6 @@ def get_ticket(
     ticket = db.query(Ticket).filter(Ticket.ticket_id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    if current_user.role != "admin" and ticket.user_id != current_user.id:
+    if current_user.role != "admin" and ticket.user_id != current_user.user_id:
         raise HTTPException(status_code=403, detail="Access denied")
     return ticket
