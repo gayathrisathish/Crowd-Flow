@@ -1,4 +1,3 @@
-cat > backend/src/main.py << 'EOF'
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -58,4 +57,3 @@ app.include_router(crowd_router.router)
 @app.get("/", tags=["Health"])
 def health_check():
     return {"status": "ok", "service": "Crowd-Flow API"}
-EOF
