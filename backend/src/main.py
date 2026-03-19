@@ -1,10 +1,11 @@
+cat > backend/src/main.py << 'EOF'
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.database import engine, Base
-import src.models  # noqa: F401  — ensure models are registered with Base
+import src.models  # noqa: F401
 from src.routers import (
     auth_router,
     events_router,
@@ -34,23 +35,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-import os
-
-CORS_ORIGINS = [
-    "https://crowd-flow-delta.vercel.app",
-    "http://localhost:5173"
-]
-// Express example
-app.use(cors({
-  origin: [
-    "https://crowd-flow-delta.vercel.app",
-    "http://localhost:5173"
-  ],
-  credentials: true
-}));
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS,
+    allow_origins=[
+        "https://crowd-flow-delta.vercel.app",
+        "http://localhost:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -68,6 +58,4 @@ app.include_router(crowd_router.router)
 @app.get("/", tags=["Health"])
 def health_check():
     return {"status": "ok", "service": "Crowd-Flow API"}
-@app.get("/")
-def root():
-    return {"message": "Crowd-Flow API is running"}
+EOF
