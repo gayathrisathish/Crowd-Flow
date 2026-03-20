@@ -6,10 +6,6 @@ from src.database import SessionLocal, engine, Base
 from src.models import User, Ticket, Event, CrowdPoint
 from src.auth import hash_password
 import src.models  # ensure all models registered
-from passlib.context import CryptContext
-
-# Fast bcrypt for seeding
-fast_pwd = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=4)
 
 Base.metadata.create_all(bind=engine)
 db = SessionLocal()
@@ -64,7 +60,7 @@ for i in range(100):
 
     user = User(
         username=username,
-        password_hash=fast_pwd.hash(password),
+        password_hash=hash_password(password),
         role="attendee",
     )
     db.add(user)
