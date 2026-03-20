@@ -9,7 +9,7 @@ from src.database import Base
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column("user_id", Integer, primary_key=True, autoincrement=True)
     username = Column(String(100), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     role = Column(SAEnum("admin", "attendee", name="user_role"), nullable=False, default="attendee")
@@ -22,7 +22,7 @@ class User(Base):
 class Event(Base):
     __tablename__ = "events"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column("event_id", Integer, primary_key=True, autoincrement=True)
     name = Column(String(255), nullable=False)
     location = Column(String(255), nullable=False)
     date = Column(DateTime, nullable=False)
@@ -34,10 +34,10 @@ class Event(Base):
 class Ticket(Base):
     __tablename__ = "tickets"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column("ticket_pk_id", Integer, primary_key=True, autoincrement=True)
     ticket_id = Column(String(100), unique=True, nullable=False, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
+    event_id = Column(Integer, ForeignKey("events.event_id"), nullable=False)
     status = Column(
         SAEnum("active", "used", "cancelled", name="ticket_status"),
         nullable=False,
@@ -52,8 +52,8 @@ class Ticket(Base):
 class Alert(Base):
     __tablename__ = "alerts"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
+    id = Column("alert_id", Integer, primary_key=True, autoincrement=True)
+    event_id = Column(Integer, ForeignKey("events.event_id"), nullable=False)
     message = Column(Text, nullable=False)
     level = Column(SAEnum("alert", "safe", name="alert_level"), nullable=False, default="alert")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
@@ -64,10 +64,10 @@ class Alert(Base):
 class CrowdVerification(Base):
     __tablename__ = "crowd_verification"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    ticket_id = Column(Integer, ForeignKey("tickets.id"), nullable=False)
+    id = Column("verification_id", Integer, primary_key=True, autoincrement=True)
+    ticket_id = Column("ticket_pk_id", Integer, ForeignKey("tickets.ticket_pk_id"), nullable=False)
     verified_at = Column(DateTime, default=datetime.datetime.utcnow)
-    verifier_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    verifier_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
 
     ticket = relationship("Ticket", back_populates="verification")
     verifier = relationship("User")
@@ -76,9 +76,9 @@ class CrowdVerification(Base):
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column("audit_id", Integer, primary_key=True, autoincrement=True)
     action = Column(String(255), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=True)
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
     details = Column(Text, nullable=True)
 
@@ -88,8 +88,8 @@ class AuditLog(Base):
 class CrowdPoint(Base):
     __tablename__ = "crowd_points"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
+    id = Column("crowd_point_id", Integer, primary_key=True, autoincrement=True)
+    event_id = Column(Integer, ForeignKey("events.event_id"), nullable=False)
     lat = Column(Float, nullable=False)
     lng = Column(Float, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
