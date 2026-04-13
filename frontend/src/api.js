@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://crowd-flow-production-eb13.up.railway.app";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8001";
 const api = axios.create({ baseURL: API_BASE, timeout: 10000 });
 
 api.interceptors.request.use((config) => {

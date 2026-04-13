@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import { register as apiRegister, getEvents, login as apiLogin, getMe } from "../api";
 import { useAuth } from "../AuthContext";
 
@@ -60,9 +59,7 @@ export default function Register() {
         <button type="submit" disabled={loading || events.length === 0}>
           {loading ? "Creating…" : "Register"}
         </button>
-        <p className="auth-footer">
-          Already have an account? <Link to="/login">Sign in</Link>
-        </p>
+        <p className="auth-footer">This page handles attendee registration and automatic sign-in.</p>
       </form>
     </div>
   );
