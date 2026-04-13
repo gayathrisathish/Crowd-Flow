@@ -1,16 +1,34 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
-import {
-  getEvents, createEvent, updateEvent, deleteEvent,
-  getAllTickets, getAlerts, createAlert,
-  verifyTicket, getAuditLogs,
-} from "../api";
 import {
   HiOutlineCalendar, HiOutlineTicket, HiOutlineBell,
   HiOutlineShieldCheck, HiOutlineClipboardDocumentList,
   HiOutlineArrowRightStartOnRectangle, HiOutlineMapPin,
 } from "react-icons/hi2";
+
+const INITIAL_EVENTS = [
+  { id: 1, name: "Tech Summit 2026", location: "Chennai", date: "2026-04-20T10:00:00" },
+  { id: 2, name: "Music Fest", location: "Mumbai", date: "2026-04-25T18:00:00" },
+  { id: 3, name: "Startup Expo", location: "Bangalore", date: "2026-05-01T09:30:00" },
+];
+
+const INITIAL_TICKETS = [
+  { id: 1, ticket_id: "TKT-001", user: "john_doe", event: "Tech Summit 2026", event_id: 1, status: "active" },
+  { id: 2, ticket_id: "TKT-002", user: "jane_smith", event: "Music Fest", event_id: 2, status: "used" },
+  { id: 3, ticket_id: "TKT-003", user: "alex_k", event: "Startup Expo", event_id: 3, status: "active" },
+];
+
+const INITIAL_ALERTS = [
+  { id: 1, level: "alert", message: "High queue at Gate A", created_at: "2026-04-13T10:02:00", event_id: 1 },
+  { id: 2, level: "safe", message: "Gate B flow normalized", created_at: "2026-04-13T10:07:00", event_id: 2 },
+];
+
+const INITIAL_AUDIT_LOGS = [
+  { id: 1, timestamp: "2026-04-13T10:00:00", action: "USER_LOGIN", user: "admin", details: "Admin logged in" },
+  { id: 2, timestamp: "2026-04-13T10:05:00", action: "EVENT_CREATE", user: "admin", details: "Created Tech Summit 2026" },
+  { id: 3, timestamp: "2026-04-13T10:10:00", action: "TICKET_VERIFY", user: "admin", details: "Verified TKT-001" },
+];
 
 /* ─── tiny sub-components ─── */
 function Stat({ icon, label, value, color }) {
@@ -44,7 +62,7 @@ function CrowdHeatmap({ events, tickets }) {
             key={d.id}
             className="heatmap-cell clickable"
             style={{
-              background: `rgba(34,197,94, ${Math.max(0.1, d.pct / 100)})`,
+              background: "var(--surface2)",
               cursor: "pointer",
             }}
             onClick={() => navigate(`/admin/monitor/${d.id}`)}
@@ -64,10 +82,10 @@ export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const [tab, setTab] = useState("overview");
 
-  const [events, setEvents] = useState([]);
-  const [tickets, setTickets] = useState([]);
-  const [alerts, setAlerts] = useState([]);
-  const [auditLogs, setAuditLogs] = useState([]);
+  const [events, setEvents] = useState(INITIAL_EVENTS);
+  const [tickets, setTickets] = useState(INITIAL_TICKETS);
+  const [alerts, setAlerts] = useState(INITIAL_ALERTS);
+  const [auditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -77,75 +95,120 @@ export default function AdminDashboard() {
   const [verifyId, setVerifyId] = useState("");
   const [editEvent, setEditEvent] = useState(null);
 
-  const load = useCallback(async () => {
-    try {
-      const [ev, tk, al, au] = await Promise.all([
-        getEvents(), getAllTickets(), getAlerts(), getAuditLogs(),
-      ]);
-      setEvents(ev.data);
-      setTickets(tk.data);
-      setAlerts(al.data);
-      setAuditLogs(au.data);
-    } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
+  const addAuditLog = (action, details) => {
+    setAuditLogs((prev) => {
+      const nextId = prev.length > 0 ? Math.max(...prev.map((l) => Number(l.id) || 0)) + 1 : 1;
+      return [
+        {
+          id: nextId,
+          timestamp: new Date().toISOString(),
+          action,
+          user: "admin",
+          details,
+        },
+        ...prev,
+      ];
+    });
+  };
 
   /* actions */
-  const handleCreateEvent = async (e) => {
+  const handleCreateEvent = (e) => {
     e.preventDefault();
     setError("");
-    try {
-      await createEvent({ ...evForm, date: new Date(evForm.date).toISOString() });
-      setEvForm({ name: "", location: "", date: "" });
-      load();
-    } catch (err) { setError(err.response?.data?.detail || "Failed"); }
+    const eventDate = new Date(evForm.date);
+    if (Number.isNaN(eventDate.getTime())) {
+      setError("Invalid event date");
+      return;
+    }
+
+    const nextId = events.length > 0 ? Math.max(...events.map((ev) => Number(ev.id) || 0)) + 1 : 1;
+    const newEvent = {
+      id: nextId,
+      name: evForm.name,
+      location: evForm.location,
+      date: eventDate.toISOString(),
+    };
+
+    setEvents((prev) => [...prev, newEvent]);
+    setEvForm({ name: "", location: "", date: "" });
+    addAuditLog("EVENT_CREATE", `Created ${newEvent.name}`);
   };
 
-  const handleUpdateEvent = async (e) => {
+  const handleUpdateEvent = (e) => {
     e.preventDefault();
     setError("");
-    try {
-      await updateEvent(editEvent.id, {
-        name: editEvent.name,
-        location: editEvent.location,
-        date: new Date(editEvent.date).toISOString(),
-      });
-      setEditEvent(null);
-      load();
-    } catch (err) { setError(err.response?.data?.detail || "Failed"); }
+    const updatedDate = new Date(editEvent.date);
+    if (Number.isNaN(updatedDate.getTime())) {
+      setError("Invalid event date");
+      return;
+    }
+
+    setEvents((prev) => prev.map((ev) => (
+      ev.id === editEvent.id
+        ? { ...ev, name: editEvent.name, location: editEvent.location, date: updatedDate.toISOString() }
+        : ev
+    )));
+    setEditEvent(null);
   };
 
-  const handleDeleteEvent = async (id) => {
+  const handleDeleteEvent = (id) => {
     if (!confirm("Delete this event?")) return;
-    try { await deleteEvent(id); load(); }
-    catch (err) { setError(err.response?.data?.detail || "Failed"); }
+    setEvents((prev) => prev.filter((ev) => ev.id !== id));
   };
 
-  const handleCreateAlert = async (e) => {
+  const handleCreateAlert = (e) => {
     e.preventDefault();
     setError("");
-    try {
-      await createAlert({ ...alertForm, event_id: Number(alertForm.event_id) });
-      setAlertForm({ event_id: "", message: "", level: "alert" });
-      load();
-    } catch (err) { setError(err.response?.data?.detail || "Failed"); }
+    const eventId = Number(alertForm.event_id);
+    if (!eventId) {
+      setError("Please select an event");
+      return;
+    }
+
+    const nextId = alerts.length > 0 ? Math.max(...alerts.map((a) => Number(a.id) || 0)) + 1 : 1;
+    const newAlert = {
+      id: nextId,
+      event_id: eventId,
+      message: alertForm.message,
+      level: alertForm.level,
+      created_at: new Date().toISOString(),
+    };
+
+    setAlerts((prev) => [newAlert, ...prev]);
+    setAlertForm({ event_id: "", message: "", level: "alert" });
+    addAuditLog("ALERT_CREATE", `Created ${newAlert.level} alert for event ${eventId}`);
   };
 
-  const handleVerify = async (e) => {
+  const handleVerify = (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
-    try {
-      await verifyTicket(verifyId);
-      setSuccess(`Ticket ${verifyId} verified successfully!`);
-      setVerifyId("");
-      load();
-    } catch (err) { setError(err.response?.data?.detail || "Failed"); }
+
+    const normalized = verifyId.trim();
+    let found = false;
+    setTickets((prev) => prev.map((t) => {
+      if (t.ticket_id === normalized) {
+        found = true;
+        return { ...t, status: "used" };
+      }
+      return t;
+    }));
+
+    if (!found) {
+      setError("Ticket not found");
+      return;
+    }
+
+    setSuccess(`Ticket ${normalized} verified successfully!`);
+    setVerifyId("");
   };
+
+  const eventMap = Object.fromEntries(events.map((ev) => [ev.id, ev]));
 
   const activeTickets = tickets.filter((t) => t.status === "active").length;
   const usedTickets = tickets.filter((t) => t.status === "used").length;
+  const totalEvents = events.length;
+  const totalAlerts = alerts.length;
 
   const TABS = [
     { key: "overview", label: "Overview", icon: <HiOutlineMapPin /> },
@@ -160,7 +223,7 @@ export default function AdminDashboard() {
     <div className="dashboard">
       {/* sidebar */}
       <aside className="sidebar">
-        <div className="sidebar-logo">CF</div>
+        <div className="sidebar-logo">Crowd Flow</div>
         <nav>
           {TABS.map((t) => (
             <button
@@ -191,10 +254,10 @@ export default function AdminDashboard() {
         {tab === "overview" && (
           <>
             <div className="stats-row">
-              <Stat icon={<HiOutlineCalendar />} label="Events" value={events.length} color="#2563EB" />
+              <Stat icon={<HiOutlineCalendar />} label="Events" value={totalEvents} color="#2563EB" />
               <Stat icon={<HiOutlineTicket />} label="Active Tickets" value={activeTickets} color="#22C55E" />
               <Stat icon={<HiOutlineShieldCheck />} label="Verified" value={usedTickets} color="#8B5CF6" />
-              <Stat icon={<HiOutlineBell />} label="Alerts" value={alerts.length} color="#EF4444" />
+              <Stat icon={<HiOutlineBell />} label="Alerts" value={totalAlerts} color="#EF4444" />
             </div>
             <CrowdHeatmap events={events} tickets={tickets} />
             <div className="panel">
@@ -264,8 +327,8 @@ export default function AdminDashboard() {
                 {tickets.map((t) => (
                   <tr key={t.id}>
                     <td className="mono">{t.ticket_id}</td>
-                    <td>{t.user_id}</td>
-                    <td>{t.event_id}</td>
+                    <td>{t.user ?? t.username ?? t.user_id ?? "-"}</td>
+                    <td>{t.event ?? eventMap[t.event_id]?.name ?? t.event_id ?? "-"}</td>
                     <td><span className={`badge ${t.status}`}>{t.status}</span></td>
                   </tr>
                 ))}
@@ -323,7 +386,7 @@ export default function AdminDashboard() {
                   <tr key={l.id}>
                     <td>{new Date(l.timestamp).toLocaleString()}</td>
                     <td><span className="mono">{l.action}</span></td>
-                    <td>{l.user_id ?? "—"}</td>
+                    <td>{l.user ?? l.user_id ?? "—"}</td>
                     <td>{l.details ?? "—"}</td>
                   </tr>
                 ))}

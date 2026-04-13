@@ -28,7 +28,15 @@ export default function CrowdMonitor() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  const [data, setData] = useState(null);
+  const [data, setData] = useState({
+    points: [],
+    clusters: [],
+    total_users: 0,
+    active_clusters: 0,
+    high_density: 0,
+    threshold: 40,
+    system_density: 0,
+  });
   const [event, setEvent] = useState(null);
   const [selectedCluster, setSelectedCluster] = useState(null);
   const [refreshInterval, setRefreshInterval] = useState(5);
@@ -37,11 +45,83 @@ export default function CrowdMonitor() {
   const loadData = useCallback(async () => {
     try {
       const res = await getCrowdData(eventId);
-      setData(res.data);
+      setData((prev) => ({
+        ...prev,
+        ...res.data,
+        system_density: res.data?.system_density ?? prev.system_density ?? 0,
+      }));
     } catch (err) {
       console.error("Failed to load crowd data", err);
     }
   }, [eventId]);
+
+  const getEventCenter = () => {
+    const lat = Number(event?.lat ?? event?.latitude ?? MAP_CENTER[0]);
+    const lng = Number(event?.lng ?? event?.longitude ?? MAP_CENTER[1]);
+    return [lat, lng];
+  };
+
+  const createRandomPoints = (count) => {
+    const [centerLat, centerLng] = getEventCenter();
+    return Array.from({ length: count }, (_, idx) => {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = Math.sqrt(Math.random()) * 0.01;
+      return {
+        id: `local-${Date.now()}-${idx}`,
+        lat: Number((centerLat + Math.cos(angle) * distance).toFixed(6)),
+        lng: Number((centerLng + Math.sin(angle) * distance).toFixed(6)),
+      };
+    });
+  };
+
+  const createOfflineClusters = (totalUsers, activeClusters, highDensityCount, threshold) => {
+    const [centerLat, centerLng] = getEventCenter();
+    const base = Math.max(1, Math.floor(totalUsers / activeClusters));
+    const clusterIds = Array.from({ length: activeClusters }, (_, i) => i);
+    const shuffled = [...clusterIds].sort(() => Math.random() - 0.5);
+    const highDensitySet = new Set(shuffled.slice(0, Math.min(highDensityCount, activeClusters)));
+
+    return clusterIds.map((id) => {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 0.001 + Math.random() * 0.004;
+      const jitter = Math.floor(Math.random() * 5) - 2;
+      const isHighDensity = highDensitySet.has(id);
+      const size = Math.max(1, base + jitter + (isHighDensity ? Math.floor(Math.random() * 8) + 4 : 0));
+
+      return {
+        id,
+        lat: Number((centerLat + Math.cos(angle) * distance).toFixed(6)),
+        lng: Number((centerLng + Math.sin(angle) * distance).toFixed(6)),
+        size,
+        exceeds_threshold: isHighDensity || size > threshold,
+        status: isHighDensity || size > threshold ? "CROWDED" : "NORMAL",
+      };
+    });
+  };
+
+  const applyOfflineSimulation = () => {
+    const newPoints = createRandomPoints(20);
+    const randomActiveClusters = Math.floor(Math.random() * 4) + 3; // 3-6
+    const randomHighDensity = Math.floor(Math.random() * 3) + 1; // 1-3
+    const densityIncrease = Math.floor(Math.random() * 11) + 15; // 15-25
+
+    setData((prev) => {
+      const nextTotalUsers = (prev.total_users || 0) + 20;
+      const threshold = prev.threshold || 40;
+      const offlineClusters = createOfflineClusters(nextTotalUsers, randomActiveClusters, randomHighDensity, threshold);
+
+      return {
+        ...prev,
+        points: [...(prev.points || []), ...newPoints],
+        clusters: offlineClusters,
+        total_users: nextTotalUsers,
+        active_clusters: randomActiveClusters,
+        high_density: randomHighDensity,
+        system_density: Math.min(100, (prev.system_density || 0) + densityIncrease),
+        threshold,
+      };
+    });
+  };
 
   useEffect(() => {
     loadData();
@@ -58,9 +138,14 @@ export default function CrowdMonitor() {
     setLoading(true);
     try {
       const res = await simulateCrowd(eventId);
-      setData(res.data);
+      setData((prev) => ({
+        ...prev,
+        ...res.data,
+        system_density: res.data?.system_density ?? prev.system_density ?? 0,
+      }));
     } catch (err) {
       console.error("Simulate failed", err);
+      applyOfflineSimulation();
     }
     setLoading(false);
   };
@@ -69,17 +154,48 @@ export default function CrowdMonitor() {
     if (!confirm("Reset all crowd data for this event?")) return;
     try {
       await resetCrowd(eventId);
-      setData({ points: [], clusters: [], total_users: 0, active_clusters: 0, high_density: 0, threshold: 40 });
+      setData({
+        points: [],
+        clusters: [],
+        total_users: 0,
+        active_clusters: 0,
+        high_density: 0,
+        threshold: 40,
+        system_density: 0,
+      });
       setSelectedCluster(null);
     } catch (err) {
       console.error("Reset failed", err);
+      setData({
+        points: [],
+        clusters: [],
+        total_users: 0,
+        active_clusters: 0,
+        high_density: 0,
+        threshold: 40,
+        system_density: 0,
+      });
+      setSelectedCluster(null);
     }
   };
 
-  const alertClusters = data?.clusters?.filter(c => c.exceeds_threshold) || [];
-  const systemDensity = data?.total_users
+  const threshold = Number(data?.threshold ?? 40);
+  const normalizedClusters = (data?.clusters || []).map((c) => {
+    const size = Number(c.size || 0);
+    const exceedsThreshold = size >= threshold;
+    return {
+      ...c,
+      size,
+      exceeds_threshold: exceedsThreshold,
+      status: exceedsThreshold ? "CROWDED" : "NORMAL",
+    };
+  });
+  const alertClusters = normalizedClusters.filter((c) => c.exceeds_threshold);
+  const highDensityCount = alertClusters.length;
+  const computedDensity = data?.total_users
     ? Math.min(100, Math.round((data.total_users / (data.threshold * data.active_clusters || 1)) * 100))
     : 0;
+  const systemDensity = data?.system_density ?? computedDensity;
 
   return (
     <div className="crowd-monitor">
@@ -136,11 +252,11 @@ export default function CrowdMonitor() {
             ))}
 
             {/* Cluster circles */}
-            {data?.clusters?.map(c => (
+            {normalizedClusters.map(c => (
               <Circle
                 key={`cluster-${c.id}`}
                 center={[c.lat, c.lng]}
-                radius={c.exceeds_threshold ? 300 + c.size * 3 : 150 + c.size * 2}
+                radius={c.exceeds_threshold ? 45 + c.size * 2 : 25 + c.size * 1.5}
                 pathOptions={{
                   color: c.exceeds_threshold ? "#ff0000" : "#ff8800",
                   fillColor: c.exceeds_threshold ? "#ff0000" : "#ff8800",
@@ -219,7 +335,7 @@ export default function CrowdMonitor() {
 
           <div className="cm-stat-card">
             <div className="cm-stat-label">High Density</div>
-            <div className="cm-stat-value accent-red">{data?.high_density || 0} <span className="cm-stat-icon">🚨</span></div>
+            <div className="cm-stat-value accent-red">{highDensityCount} <span className="cm-stat-icon">🚨</span></div>
           </div>
 
           <div className="cm-stat-card">
@@ -232,7 +348,7 @@ export default function CrowdMonitor() {
           {/* Cluster Details */}
           <div className="cm-cluster-details">
             <h4>📋 Cluster Details</h4>
-            {data?.clusters?.map(c => (
+            {normalizedClusters.map(c => (
               <div
                 key={c.id}
                 className={`cm-cluster-card ${c.exceeds_threshold ? "danger" : ""}`}
@@ -247,7 +363,7 @@ export default function CrowdMonitor() {
                 </span>
               </div>
             ))}
-            {(!data?.clusters || data.clusters.length === 0) && (
+            {normalizedClusters.length === 0 && (
               <p className="cm-muted">No clusters yet. Click "Simulate Crowd" to add people.</p>
             )}
           </div>
