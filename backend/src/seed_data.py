@@ -42,12 +42,12 @@ def seed():
 
         # 3. Tickets
         tickets = []
-        for i in range(20):
+        for i in range(30):
             tickets.append(Ticket(
-                ticket_id=f"TKT{i+1:04d}",
+                ticket_id=f"TKT-{i+1:03d}",
                 user_id=(i % 10) + 1,
                 event_id=(i % 5) + 1,
-                status="used" if i % 3 == 0 else "active"
+                status="used" if i % 4 == 0 else ("pending" if i % 4 == 1 else "active")
             ))
         db.add_all(tickets)
         db.commit()
@@ -64,11 +64,20 @@ def seed():
             Alert(event_id=3, message="Security check complete.", level="safe"),
             Alert(event_id=4, message="Event delayed.", level="alert"),
             Alert(event_id=5, message="Lost child found.", level="safe"),
+            Alert(event_id=1, message="High queue at Gate A.", level="alert"),
+            Alert(event_id=2, message="Gate B flow normalized.", level="safe"),
+            Alert(event_id=3, message="Fire alarm test in progress.", level="alert"),
+            Alert(event_id=4, message="Parking lot 2 full.", level="alert"),
+            Alert(event_id=5, message="All gates operational.", level="safe"),
         ]
         db.add_all(alerts)
-        db.commit()
-
-        # 5. Audit Logs
+        db.commit()USER_LOGIN", timestamp=datetime.datetime.now() - datetime.timedelta(hours=i)))
+        for i in range(1, 6):
+            logs.append(AuditLog(user_id=i, action="EVENT_CREATE", timestamp=datetime.datetime.now() - datetime.timedelta(minutes=i*15)))
+        for i in range(1, 8):
+            logs.append(AuditLog(user_id=i, action="TICKET_VERIFY", timestamp=datetime.datetime.now() - datetime.timedelta(minutes=i*10)))
+        for i in range(1, 5):
+            logs.append(AuditLog(user_id=i, action="ALERT_CREATED", timestamp=datetime.datetime.now() - datetime.timedelta(minutes=i*5
         logs = []
         for i in range(1, 11):
             logs.append(AuditLog(user_id=i, action="login", timestamp=datetime.datetime.now()))

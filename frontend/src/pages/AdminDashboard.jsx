@@ -1,34 +1,27 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
+import {
+  createAlert,
+  createEvent,
+  deleteEvent,
+  getAlerts,
+  getAllTickets,
+  getAuditLogs,
+  getEvents,
+  updateEvent,
+  verifyTicket,
+} from "../api";
 import {
   HiOutlineCalendar, HiOutlineTicket, HiOutlineBell,
   HiOutlineShieldCheck, HiOutlineClipboardDocumentList,
   HiOutlineArrowRightStartOnRectangle, HiOutlineMapPin,
 } from "react-icons/hi2";
 
-const INITIAL_EVENTS = [
-  { id: 1, name: "Tech Summit 2026", location: "Chennai", date: "2026-04-20T10:00:00" },
-  { id: 2, name: "Music Fest", location: "Mumbai", date: "2026-04-25T18:00:00" },
-  { id: 3, name: "Startup Expo", location: "Bangalore", date: "2026-05-01T09:30:00" },
-];
-
-const INITIAL_TICKETS = [
-  { id: 1, ticket_id: "TKT-001", user: "john_doe", event: "Tech Summit 2026", event_id: 1, status: "active" },
-  { id: 2, ticket_id: "TKT-002", user: "jane_smith", event: "Music Fest", event_id: 2, status: "used" },
-  { id: 3, ticket_id: "TKT-003", user: "alex_k", event: "Startup Expo", event_id: 3, status: "active" },
-];
-
-const INITIAL_ALERTS = [
-  { id: 1, level: "alert", message: "High queue at Gate A", created_at: "2026-04-13T10:02:00", event_id: 1 },
-  { id: 2, level: "safe", message: "Gate B flow normalized", created_at: "2026-04-13T10:07:00", event_id: 2 },
-];
-
-const INITIAL_AUDIT_LOGS = [
-  { id: 1, timestamp: "2026-04-13T10:00:00", action: "USER_LOGIN", user: "admin", details: "Admin logged in" },
-  { id: 2, timestamp: "2026-04-13T10:05:00", action: "EVENT_CREATE", user: "admin", details: "Created Tech Summit 2026" },
-  { id: 3, timestamp: "2026-04-13T10:10:00", action: "TICKET_VERIFY", user: "admin", details: "Verified TKT-001" },
-];
+const INITIAL_EVENTS = [];
+const INITIAL_TICKETS = [];
+const INITIAL_ALERTS = [];
+const INITIAL_AUDIT_LOGS = [];
 
 /* ─── tiny sub-components ─── */
 function Stat({ icon, label, value, color }) {
@@ -86,6 +79,7 @@ export default function AdminDashboard() {
   const [tickets, setTickets] = useState(INITIAL_TICKETS);
   const [alerts, setAlerts] = useState(INITIAL_ALERTS);
   const [auditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -95,24 +89,62 @@ export default function AdminDashboard() {
   const [verifyId, setVerifyId] = useState("");
   const [editEvent, setEditEvent] = useState(null);
 
-  const addAuditLog = (action, details) => {
-    setAuditLogs((prev) => {
-      const nextId = prev.length > 0 ? Math.max(...prev.map((l) => Number(l.id) || 0)) + 1 : 1;
-      return [
-        {
-          id: nextId,
-          timestamp: new Date().toISOString(),
-          action,
-          user: "admin",
-          details,
-        },
-        ...prev,
-      ];
-    });
-  };
+  const loadDashboardData = useCallback(async () => {
+    try {
+      const [eventsRes, ticketsRes, alertsRes, auditRes] = await Promise.all([
+        getEvents(),
+        getAllTickets(),
+        getAlerts(),
+        getAuditLogs(),
+      ]);
+
+      setEvents((eventsRes.data || []).map((ev) => ({
+        id: ev.event_id,
+        name: ev.name,
+        location: ev.location,
+        date: ev.date,
+      })));
+
+      setTickets((ticketsRes.data || []).map((t) => ({
+        id: t.ticket_pk_id,
+        ticket_id: t.ticket_id,
+        user: t.user_id,
+        event_id: t.event_id,
+        status: t.status,
+      })));
+
+      setAlerts((alertsRes.data || []).map((a) => ({
+        id: a.alert_id,
+        event_id: a.event_id,
+        message: a.message,
+        level: a.level,
+        created_at: a.created_at,
+      })));
+
+      setAuditLogs((auditRes.data || []).map((l) => ({
+        id: l.audit_id,
+        timestamp: l.timestamp,
+        action: l.action,
+        user: l.user_id,
+        details: l.details,
+      })));
+
+      setError("");
+    } catch (err) {
+      setError(err.response?.data?.detail || "Failed to load dashboard data");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDashboardData();
+    const interval = setInterval(loadDashboardData, 5000);
+    return () => clearInterval(interval);
+  }, [loadDashboardData]);
 
   /* actions */
-  const handleCreateEvent = (e) => {
+  const handleCreateEvent = async (e) => {
     e.preventDefault();
     setError("");
     const eventDate = new Date(evForm.date);
@@ -121,20 +153,21 @@ export default function AdminDashboard() {
       return;
     }
 
-    const nextId = events.length > 0 ? Math.max(...events.map((ev) => Number(ev.id) || 0)) + 1 : 1;
-    const newEvent = {
-      id: nextId,
-      name: evForm.name,
-      location: evForm.location,
-      date: eventDate.toISOString(),
-    };
-
-    setEvents((prev) => [...prev, newEvent]);
-    setEvForm({ name: "", location: "", date: "" });
-    addAuditLog("EVENT_CREATE", `Created ${newEvent.name}`);
+    try {
+      await createEvent({
+        name: evForm.name,
+        location: evForm.location,
+        date: eventDate.toISOString(),
+      });
+      setEvForm({ name: "", location: "", date: "" });
+      setSuccess("Event created");
+      loadDashboardData();
+    } catch (err) {
+      setError(err.response?.data?.detail || "Failed to create event");
+    }
   };
 
-  const handleUpdateEvent = (e) => {
+  const handleUpdateEvent = async (e) => {
     e.preventDefault();
     setError("");
     const updatedDate = new Date(editEvent.date);
@@ -143,20 +176,33 @@ export default function AdminDashboard() {
       return;
     }
 
-    setEvents((prev) => prev.map((ev) => (
-      ev.id === editEvent.id
-        ? { ...ev, name: editEvent.name, location: editEvent.location, date: updatedDate.toISOString() }
-        : ev
-    )));
-    setEditEvent(null);
+    try {
+      await updateEvent(editEvent.id, {
+        name: editEvent.name,
+        location: editEvent.location,
+        date: updatedDate.toISOString(),
+      });
+      setEditEvent(null);
+      setSuccess("Event updated");
+      loadDashboardData();
+    } catch (err) {
+      setError(err.response?.data?.detail || "Failed to update event");
+    }
   };
 
-  const handleDeleteEvent = (id) => {
+  const handleDeleteEvent = async (id) => {
     if (!confirm("Delete this event?")) return;
-    setEvents((prev) => prev.filter((ev) => ev.id !== id));
+    setError("");
+    try {
+      await deleteEvent(id);
+      setSuccess("Event deleted");
+      loadDashboardData();
+    } catch (err) {
+      setError(err.response?.data?.detail || "Failed to delete event");
+    }
   };
 
-  const handleCreateAlert = (e) => {
+  const handleCreateAlert = async (e) => {
     e.preventDefault();
     setError("");
     const eventId = Number(alertForm.event_id);
@@ -165,42 +211,39 @@ export default function AdminDashboard() {
       return;
     }
 
-    const nextId = alerts.length > 0 ? Math.max(...alerts.map((a) => Number(a.id) || 0)) + 1 : 1;
-    const newAlert = {
-      id: nextId,
-      event_id: eventId,
-      message: alertForm.message,
-      level: alertForm.level,
-      created_at: new Date().toISOString(),
-    };
-
-    setAlerts((prev) => [newAlert, ...prev]);
-    setAlertForm({ event_id: "", message: "", level: "alert" });
-    addAuditLog("ALERT_CREATE", `Created ${newAlert.level} alert for event ${eventId}`);
+    try {
+      await createAlert({
+        event_id: eventId,
+        message: alertForm.message,
+        level: alertForm.level,
+      });
+      setAlertForm({ event_id: "", message: "", level: "alert" });
+      setSuccess("Alert created");
+      loadDashboardData();
+    } catch (err) {
+      setError(err.response?.data?.detail || "Failed to create alert");
+    }
   };
 
-  const handleVerify = (e) => {
+  const handleVerify = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
 
     const normalized = verifyId.trim();
-    let found = false;
-    setTickets((prev) => prev.map((t) => {
-      if (t.ticket_id === normalized) {
-        found = true;
-        return { ...t, status: "used" };
-      }
-      return t;
-    }));
-
-    if (!found) {
-      setError("Ticket not found");
+    if (!normalized) {
+      setError("Ticket id is required");
       return;
     }
 
-    setSuccess(`Ticket ${normalized} verified successfully!`);
-    setVerifyId("");
+    try {
+      await verifyTicket(normalized);
+      setSuccess(`Ticket ${normalized} verified successfully!`);
+      setVerifyId("");
+      loadDashboardData();
+    } catch (err) {
+      setError(err.response?.data?.detail || "Failed to verify ticket");
+    }
   };
 
   const eventMap = Object.fromEntries(events.map((ev) => [ev.id, ev]));
@@ -246,6 +289,8 @@ export default function AdminDashboard() {
           <h2>{TABS.find((t) => t.key === tab)?.label}</h2>
           <span className="user-badge">Admin: {user?.username}</span>
         </header>
+
+        {loading && <div className="panel"><p className="muted">Loading data from backend...</p></div>}
 
         {error && <div className="error-msg">{error}</div>}
         {success && <div className="success-msg">{success}</div>}
