@@ -202,7 +202,7 @@ export default function CrowdMonitor() {
       {/* Top Bar */}
       <header className="cm-topbar">
         <div className="cm-topbar-left">
-          <span className="cm-logo">🚨 DensityX Monitor</span>
+          <span className="cm-logo">🚨 Crowd Flow</span>
         </div>
         <div className="cm-topbar-center">
           <span className="cm-live-badge">🟢 Live</span>

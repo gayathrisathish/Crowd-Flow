@@ -25,10 +25,18 @@ def get_current_user(
     if AUTH_BYPASS:
         user = db.query(User).filter(User.role == "admin").first() or db.query(User).first()
         if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="AUTH_BYPASS is enabled but no users exist in database",
+            # Auto-create a default admin for local development when AUTH_BYPASS is enabled
+            default_username = "admin"
+            default_password = "admin"
+            admin = User(
+                username=default_username,
+                password_hash=hash_password(default_password),
+                role="admin",
             )
+            db.add(admin)
+            db.commit()
+            db.refresh(admin)
+            return admin
         return user
 
     credentials_exception = HTTPException(
